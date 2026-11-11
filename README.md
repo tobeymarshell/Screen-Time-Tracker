@@ -6,7 +6,6 @@ Inspired by Android's Digital Wellbeing and macOS aesthetics, it embeds itself n
 
 <img width="280" height="178" alt="image" src="https://github.com/user-attachments/assets/46dc6c82-8e39-4358-b78c-626715d0876c" />
 
-
 <img width="792" height="770" alt="image" src="https://github.com/user-attachments/assets/36d30bef-2ca8-482f-89bd-5cda0daed7ae" />
 
 
@@ -27,3 +26,8 @@ Inspired by Android's Digital Wellbeing and macOS aesthetics, it embeds itself n
    ```bash
    git clone https://github.com/tobeymarshell/Screen-Time-Tracker.git
    cd Screen-Time-Tracker
+   ```
+   or else you can run the .exe file and that's it.
+2. **create .exe file (optional)**
+   ```bash
+   pyinstaller --noconsole --onefile --name "ScreenTime" screen_time.py
