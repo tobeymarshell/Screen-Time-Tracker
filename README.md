@@ -35,6 +35,7 @@ Inspired by Android's Digital Wellbeing and macOS aesthetics, it embeds itself n
    cd Screen-Time-Tracker
    ```
    or else you can run the .exe file and that's it.
-2. **create .exe file (optional)**
+
+3. **create .exe file (optional)**
    ```bash
    pyinstaller --noconsole --onefile --name "ScreenTime" screen_time.py
