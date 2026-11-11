@@ -4,7 +4,14 @@ A lightweight, privacy-first desktop widget for Windows that tracks your screen 
 
 Inspired by Android's Digital Wellbeing and macOS aesthetics, it embeds itself natively into your Windows wallpaper (using the `WorkerW` layer), so it sits perfectly behind your open windows and never gets in the way of your work or games.
 
-<img width="280" height="178" alt="image" src="https://github.com/user-attachments/assets/46dc6c82-8e39-4358-b78c-626715d0876c" />
+
+
+<table>
+  <tr>
+    <td width="50%"><img width="280" height="178" alt="image" src="https://github.com/user-attachments/assets/46dc6c82-8e39-4358-b78c-626715d0876c" /></td>
+    <td width="50%"><img width="318" height="335" alt="image" src="https://github.com/user-attachments/assets/04215204-4a4e-445d-ab99-28b0fbdd63d2" /></td>
+  </tr>
+</table>
 
 <img width="792" height="770" alt="image" src="https://github.com/user-attachments/assets/36d30bef-2ca8-482f-89bd-5cda0daed7ae" />
 
