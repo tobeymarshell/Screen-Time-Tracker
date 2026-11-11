@@ -3,6 +3,9 @@
 A lightweight, privacy-first desktop widget for Windows that tracks your screen time, visualizes your app usage, and features a 1-click system optimizer. 
 
 Inspired by Android's Digital Wellbeing and macOS aesthetics, it embeds itself natively into your Windows wallpaper (using the `WorkerW` layer), so it sits perfectly behind your open windows and never gets in the way of your work or games.
+<img width="792" height="770" alt="image" src="https://github.com/user-attachments/assets/36d30bef-2ca8-482f-89bd-5cda0daed7ae" />
+![Uploading image.png…]()
+
 
 ## ✨ Features
 - **Digital Wellbeing:** Tracks active window time and saves it locally to an SQLite database.
