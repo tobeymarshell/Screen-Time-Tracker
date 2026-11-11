@@ -8,12 +8,15 @@ Inspired by Android's Digital Wellbeing and macOS aesthetics, it embeds itself n
 
 <table>
   <tr>
-    <td width="50%"><img width="280" height="178" alt="image" src="https://github.com/user-attachments/assets/46dc6c82-8e39-4358-b78c-626715d0876c" /></td>
-    <td width="50%"><img width="318" height="335" alt="image" src="https://github.com/user-attachments/assets/04215204-4a4e-445d-ab99-28b0fbdd63d2" /></td>
+    <td width="50%"><img width="282" height="188" alt="image" src="https://github.com/user-attachments/assets/688bfe84-47c3-4d48-917f-0f41add19938" />
+</td>
+    <td width="50%"><img width="325" height="285" alt="image" src="https://github.com/user-attachments/assets/8d1708c0-db6e-4294-a355-f505dee552f9" />
+</td>
   </tr>
 </table>
 
-<img width="792" height="770" alt="image" src="https://github.com/user-attachments/assets/36d30bef-2ca8-482f-89bd-5cda0daed7ae" />
+<img width="855" height="768" alt="image" src="https://github.com/user-attachments/assets/ebcab186-ea49-4ce3-a498-249e3f73addb" />
+
 
 
 ## ✨ Features
