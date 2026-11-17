@@ -1,10 +1,30 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# PyInstaller & Executables
+*.exe
+*.spec
+build/
+dist/
+
+# SQLite databases & runtime storage
 *.db
 *.db-shm
 *.db-wal
 log.txt
 pos.json
-build/
-dist/
-*.spec
+
+# Backup files
+*.bak
+*.bak/
+
+# Environment & IDE
+.env
+venv/
+.venv/
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
