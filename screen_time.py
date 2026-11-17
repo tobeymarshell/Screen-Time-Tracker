@@ -245,6 +245,33 @@ def try_acquire_mutex(name):
     _MUTEX_HANDLES.append(h)
     return h
 
+# ─────────── ACCURATE NETWORK COUNTER (FILTERS VIRTUAL ADAPTERS) ───────────
+def get_physical_net_io():
+    """Calculates network usage ONLY for physical adapters (Ethernet/Wi-Fi), ignoring VirtualBox, WSL, and VPNs."""
+    try:
+        stats = psutil.net_io_counters(pernic=True)
+        if_stats = psutil.net_if_stats()
+        total_sent = 0
+        total_recv = 0
+        for nic, data in stats.items():
+            name_lower = nic.lower()
+            # Ignore loopback, virtual network interfaces, and pseudo-interfaces
+            if any(k in name_lower for k in ["loopback", "vbox", "vmware", "wsl", "vethernet", "tap", "tun", "virtual", "pseudo", "wan miniport", "teredo"]):
+                continue
+            
+            # Only count interfaces that are UP
+            if nic in if_stats and if_stats[nic].isup:
+                total_sent += data.bytes_sent
+                total_recv += data.bytes_recv
+        return total_sent, total_recv
+    except Exception:
+        # Fallback to standard counter if pernic fails
+        try:
+            net = psutil.net_io_counters()
+            return net.bytes_sent, net.bytes_recv
+        except Exception:
+            return 0, 0
+
 def init_db(conn):
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
@@ -406,21 +433,20 @@ def run_tracker(db_path, idle_threshold=180, poll_interval=1.0, stop_event=None)
     proc_cache = {}
     last_proc_io = {}
     
-    last_net = None
-    try:
-        last_net = psutil.net_io_counters()
-    except Exception: pass
+    last_net_sent, last_net_recv = get_physical_net_io()
 
     try:
         while stop_event is None or not stop_event.is_set():
             now = time.time()
             dt = now - last_loop_time
 
+            # SLEEP/WAKE FIX: If gap is > 4 seconds, the machine slept. Reset counters to avoid massive data spikes.
             if dt > 4.0:
                 if current_session_id and session_start is not None:
                     update_session(conn, current_session_id, last_loop_time, session_start)
                 current_app, session_start, current_session_id = None, None, None
                 transient_grace = 0
+                last_net_sent, last_net_recv = get_physical_net_io()
 
             last_loop_time = now
             locked = is_workstation_locked()
@@ -430,15 +456,20 @@ def run_tracker(db_path, idle_threshold=180, poll_interval=1.0, stop_event=None)
                 is_idle = False
 
             ds, dr = 0, 0
-            try:
-                cur_net = psutil.net_io_counters()
-                if last_net is not None:
-                    ds = max(0, cur_net.bytes_sent - last_net.bytes_sent)
-                    dr = max(0, cur_net.bytes_recv - last_net.bytes_recv)
+            cur_net_sent, cur_net_recv = get_physical_net_io()
+            if last_net_sent is not None and last_net_recv is not None:
+                ds = max(0, cur_net_sent - last_net_sent)
+                dr = max(0, cur_net_recv - last_net_recv)
+                
+                # SPIKE PROTECTION: Ignore any single-second delta > 50MB (prevents glitches)
+                if ds > 50 * 1024 * 1024 or dr > 50 * 1024 * 1024:
+                    ds = 0
+                    dr = 0
+                else:
                     accum_sent += ds
                     accum_recv += dr
-                last_net = cur_net
-            except Exception: pass
+                    
+            last_net_sent, last_net_recv = cur_net_sent, cur_net_recv
 
             if ds > 0 or dr > 0:
                 proc_deltas = {}
@@ -690,11 +721,8 @@ class AppRow(tk.Canvas):
         dur_str = format_duration(self.dur)
         self.create_text(w - 18, 27, text=dur_str, fill=FG, font=(FONT_MAIN, 11, "bold"), anchor="e")
         
-        pct = int((self.dur / self.mx) * 100)
-        self.create_text(w - 95, 27, text=f"{pct}%", fill=MUTED, font=(FONT_MAIN, 9), anchor="e")
-        
         bar_x1 = 250
-        bar_x2 = w - 130
+        bar_x2 = w - 80
         bar_w = bar_x2 - bar_x1
         if bar_w > 20:
             bw = max(int(bar_w * (self.dur / self.mx)), 6)
@@ -806,16 +834,11 @@ class AppDataRow(tk.Canvas):
         sub_str = f"↓ {format_bytes(self.recv)}  •  ↑ {format_bytes(self.sent)}"
         self.create_text(56, 38, text=sub_str, fill=MUTED, font=(FONT_MAIN, 9), anchor="w")
 
-        # FIXED: Moved total string further to the left to prevent cut-off
         total_str = format_bytes(self.total)
-        self.create_text(w - 25, 27, text=total_str, fill=FG, font=(FONT_MAIN, 11, "bold"), anchor="e")
-        
-        # Moved percentage further to the left
-        pct = int((self.total / self.day_total) * 100)
-        self.create_text(w - 110, 27, text=f"{pct}%", fill=MUTED, font=(FONT_MAIN, 9), anchor="e")
+        self.create_text(w - 20, 27, text=total_str, fill=FG, font=(FONT_MAIN, 11, "bold"), anchor="e")
 
         bar_x1 = 250
-        bar_x2 = w - 130
+        bar_x2 = w - 110
         bar_w = bar_x2 - bar_x1
         if bar_w > 20:
             bw = max(int(bar_w * (self.total / self.day_total)), 6)
@@ -902,7 +925,6 @@ class Dashboard:
         tab_container = tk.Frame(self.window, bg=BG)
         tab_container.pack(fill="x", padx=30, pady=(14, 0))
 
-        # FIXED: Replaced the RoundedCard wrapper with a simple Frame to prevent clipping
         tab_bar = tk.Frame(tab_container, bg=CARD_BG, highlightbackground=CARD_BORDER, highlightthickness=1)
         tab_bar.pack(side="left")
 
@@ -1068,7 +1090,6 @@ class Dashboard:
         self.data_canvas.pack(side="left", fill="both", expand=True)
         data_scrollbar.pack(side="right", fill="y")
 
-        # BUG FIX: Prevent auto-refresh from jumping the scrollbar
         def on_scroll(event):
             self.last_scroll_time = time.time()
             self.data_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
@@ -1106,10 +1127,9 @@ class Dashboard:
             self.refresh_data_tab()
 
     def auto_refresh(self): 
-        # Only refresh if user hasn't scrolled recently (within 3 seconds)
         if time.time() - self.last_scroll_time > 3:
             self.refresh_current_tab()
-        self.auto_refresh_job = self.window.after(3000, self.auto_refresh) # Slowed down from 2s to 3s
+        self.auto_refresh_job = self.window.after(3000, self.auto_refresh)
 
     def on_day_click(self, day_str):
         try:
@@ -1365,11 +1385,11 @@ class DesktopWidget:
         self.drag_y = 0
         self.cleanup_popup = None
         self.dash_ref = [None]
-        self.last_net_bytes = None
+        self.last_net_sent = None
+        self.last_net_recv = None
         self.last_net_time = time.time()
-        try:
-            self.last_net_bytes = psutil.net_io_counters()
-        except Exception: pass
+        
+        self.last_net_sent, self.last_net_recv = get_physical_net_io()
 
         root.withdraw()
         root.overrideredirect(True)
@@ -1651,16 +1671,22 @@ class DesktopWidget:
         now = time.time()
         dt = max(0.1, now - self.last_net_time)
         speed_sent, speed_recv = 0.0, 0.0
-        try:
-            cur_net = psutil.net_io_counters()
-            if self.last_net_bytes is not None:
-                d_sent = max(0, cur_net.bytes_sent - self.last_net_bytes.bytes_sent)
-                d_recv = max(0, cur_net.bytes_recv - self.last_net_bytes.bytes_recv)
-                speed_sent = d_sent / dt
-                speed_recv = d_recv / dt
-            self.last_net_bytes = cur_net
-            self.last_net_time = now
-        except Exception: pass
+        
+        cur_net_sent, cur_net_recv = get_physical_net_io()
+        if self.last_net_sent is not None and self.last_net_recv is not None:
+            d_sent = max(0, cur_net_sent - self.last_net_sent)
+            d_recv = max(0, cur_net_recv - self.last_net_recv)
+            
+            # SPIKE PROTECTION
+            if d_sent > 50 * 1024 * 1024 or d_recv > 50 * 1024 * 1024:
+                d_sent, d_recv = 0, 0
+                
+            speed_sent = d_sent / dt
+            speed_recv = d_recv / dt
+            
+        self.last_net_sent = cur_net_sent
+        self.last_net_recv = cur_net_recv
+        self.last_net_time = now
 
         if hasattr(self, "speed_down_lbl") and hasattr(self, "speed_up_lbl"):
             self.speed_down_lbl.config(text=f"↓ {format_speed(speed_recv)}")
